@@ -268,6 +268,12 @@ function panelJs(initialWords) {
 
     const getCards = () => Array.from(document.querySelectorAll(".note-item, section"))
       .filter((card) => card.querySelector('a[href*="/explore/"], a[href*="/discovery/item/"]'));
+    window.__xhsNegativeRemoved = window.__xhsNegativeRemoved || new Map();
+    window.__xhsNegativeRemovedUrls = window.__xhsNegativeRemovedUrls || new Set();
+    const cardKey = (card) => {
+      const anchor = card.querySelector('a[href*="/explore/"], a[href*="/discovery/item/"]');
+      return anchor ? new URL(anchor.href, location.href).href.split("?")[0] : "";
+    };
 
     const parseDate = (text) => {
       const now = new Date();
@@ -302,6 +308,15 @@ function panelJs(initialWords) {
         card.removeAttribute(hiddenAttr);
         card.removeAttribute(hitAttr);
       }
+      for (const [key, record] of window.__xhsNegativeRemoved.entries()) {
+        if (!record.node || !record.placeholder || !record.placeholder.parentNode) continue;
+        record.node.removeAttribute(hiddenAttr);
+        record.node.removeAttribute(hitAttr);
+        record.placeholder.parentNode.insertBefore(record.node, record.placeholder);
+        record.placeholder.remove();
+      }
+      window.__xhsNegativeRemoved.clear();
+      window.__xhsNegativeRemovedUrls.clear();
       triggerLayout();
     };
 
@@ -331,8 +346,21 @@ function panelJs(initialWords) {
         }
 
         if (hits.length) {
+          const key = cardKey(card);
           card.setAttribute(hiddenAttr, "true");
           card.setAttribute(hitAttr, hits.join(","));
+          if (key && card.parentNode) {
+            const placeholder = document.createComment("xhs-negative-removed:" + key);
+            card.parentNode.insertBefore(placeholder, card);
+            window.__xhsNegativeRemoved.set(key, {
+              node: card,
+              placeholder,
+              parent: placeholder.parentNode,
+              hits: hits.join(","),
+            });
+            window.__xhsNegativeRemovedUrls.add(key);
+            card.remove();
+          }
           stats.hidden += 1;
           if (wordHits.length) stats.word += 1;
           if (authorHits.length) stats.author += 1;
