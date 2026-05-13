@@ -263,7 +263,6 @@ function panelJs(initialWords) {
     const hitAttr = "data-xhs-negative-hits";
     const wordsKey = "xhs-negative-search-words";
     const authorsKey = "xhs-negative-search-authors";
-    const commentsKey = "xhs-negative-search-comments";
     const dateFromKey = "xhs-negative-search-date-from";
     const dateToKey = "xhs-negative-search-date-to";
     const hideUnknownDateKey = "xhs-negative-search-hide-unknown-date";
@@ -282,19 +281,6 @@ function panelJs(initialWords) {
       const anchor = card.querySelector('a[href*="/explore/"], a[href*="/discovery/item/"]');
       return anchor ? new URL(anchor.href, location.href).href.split("?")[0] : "";
     };
-    const getCommentText = (card) => {
-      const selectors = [
-        ".comment",
-        ".comments",
-        ".comment-list",
-        ".comment-item",
-        "[class*=comment]",
-        "[class*=Comment]"
-      ];
-      const nodes = selectors.flatMap((selector) => Array.from(card.querySelectorAll(selector)));
-      return nodes.map((node) => node.innerText || node.textContent || "").join(" ");
-    };
-
     const parseDate = (text) => {
       const now = new Date();
       const normalized = String(text || "").replace(/\\s+/g, " ");
@@ -341,20 +327,17 @@ function panelJs(initialWords) {
 
     const applyFilters = (filters) => {
       clearHidden();
-      const stats = { hidden: 0, word: 0, author: 0, comment: 0, date: 0, unknownDate: 0, visible: 0 };
+      const stats = { hidden: 0, word: 0, author: 0, date: 0, unknownDate: 0, visible: 0 };
       const fromDate = parseInputDate(filters.dateFrom, false);
       const toDate = parseInputDate(filters.dateTo, true);
       for (const card of getCards()) {
         const text = normalize(card.innerText || "");
         const author = normalize(card.querySelector(".author .name")?.innerText || card.querySelector(".author")?.innerText || "");
-        const commentText = normalize(getCommentText(card));
         const hits = [];
         const wordHits = filters.words.filter((word) => text.includes(String(word).toLocaleLowerCase()));
         const authorHits = filters.authors.filter((word) => author.includes(String(word).toLocaleLowerCase()));
-        const commentHits = filters.comments.filter((word) => commentText.includes(String(word).toLocaleLowerCase()));
         for (const hit of wordHits) hits.push("word:" + hit);
         for (const hit of authorHits) hits.push("author:" + hit);
-        for (const hit of commentHits) hits.push("comment:" + hit);
 
         if (fromDate || toDate) {
           const cardDate = parseDate(card.innerText || "");
@@ -386,7 +369,6 @@ function panelJs(initialWords) {
           stats.hidden += 1;
           if (wordHits.length) stats.word += 1;
           if (authorHits.length) stats.author += 1;
-          if (commentHits.length) stats.comment += 1;
         } else {
           stats.visible += 1;
         }
@@ -398,7 +380,6 @@ function panelJs(initialWords) {
     const saveConfig = (filters) => {
       localStorage.setItem(wordsKey, filters.words.join(","));
       localStorage.setItem(authorsKey, filters.authors.join(","));
-      localStorage.setItem(commentsKey, filters.comments.join(","));
       localStorage.setItem(dateFromKey, filters.dateFrom || "");
       localStorage.setItem(dateToKey, filters.dateTo || "");
       localStorage.setItem(hideUnknownDateKey, filters.hideUnknownDate ? "1" : "0");
@@ -411,7 +392,6 @@ function panelJs(initialWords) {
     const readFilters = () => ({
       words: splitWords(panel.querySelector(".xhs-ns-words").value),
       authors: splitWords(panel.querySelector(".xhs-ns-authors").value),
-      comments: splitWords(panel.querySelector(".xhs-ns-comments").value),
       dateFrom: panel.querySelector(".xhs-ns-date-from").value,
       dateTo: panel.querySelector(".xhs-ns-date-to").value,
       hideUnknownDate: panel.querySelector(".xhs-ns-hide-unknown-date").checked,
@@ -446,14 +426,13 @@ function panelJs(initialWords) {
       panel.id = panelId;
       document.body.appendChild(panel);
     }
-    if (!panel.querySelector(".xhs-ns-panel-v3")) {
+    if (!panel.querySelector(".xhs-ns-panel-v4")) {
       panel.innerHTML = [
-        '<div class="xhs-ns-panel-v3"></div>',
+        '<div class="xhs-ns-panel-v4"></div>',
         '<div class="xhs-ns-head"><span>Negative Words</span><button class="xhs-ns-close" title="Close">×</button></div>',
         '<div class="xhs-ns-body">',
         '<div><label>内容排除词</label><textarea class="xhs-ns-words" placeholder="签证, 广告, 招募"></textarea></div>',
         '<div><label>过滤作者</label><textarea class="xhs-ns-authors" placeholder="旅行社, 代办"></textarea></div>',
-        '<div><label>过滤评论</label><textarea class="xhs-ns-comments" placeholder="私, 已回, 1"></textarea></div>',
         '<div>',
         '<div class="xhs-ns-date-row">',
         '<div><label>开始日期</label><input class="xhs-ns-date-from" type="date"></div>',
@@ -473,7 +452,6 @@ function panelJs(initialWords) {
     const header = panel.querySelector(".xhs-ns-head");
     const wordsInput = panel.querySelector(".xhs-ns-words");
     const authorsInput = panel.querySelector(".xhs-ns-authors");
-    const commentsInput = panel.querySelector(".xhs-ns-comments");
     const dateFromInput = panel.querySelector(".xhs-ns-date-from");
     const dateToInput = panel.querySelector(".xhs-ns-date-to");
     const hideUnknownDateInput = panel.querySelector(".xhs-ns-hide-unknown-date");
@@ -485,7 +463,6 @@ function panelJs(initialWords) {
     const loadedWords = loadWords();
     wordsInput.value = loadedWords.join(", ");
     authorsInput.value = localStorage.getItem(authorsKey) || "";
-    commentsInput.value = localStorage.getItem(commentsKey) || "";
     dateFromInput.value = localStorage.getItem(dateFromKey) || "";
     dateToInput.value = localStorage.getItem(dateToKey) || "";
     hideUnknownDateInput.checked = localStorage.getItem(hideUnknownDateKey) === "1";
@@ -507,11 +484,10 @@ function panelJs(initialWords) {
       const active = [];
       if (filters.words.length) active.push("words: " + filters.words.join(", "));
       if (filters.authors.length) active.push("authors: " + filters.authors.join(", "));
-      if (filters.comments.length) active.push("comments: " + filters.comments.join(", "));
       if (filters.dateFrom || filters.dateTo) active.push("date: " + (filters.dateFrom || "...") + " to " + (filters.dateTo || "..."));
       status.textContent = [
         "Hidden " + stats.hidden + " notes; visible " + stats.visible,
-        "By word " + stats.word + ", author " + stats.author + ", comment " + stats.comment + ", date " + stats.date,
+        "By word " + stats.word + ", author " + stats.author + ", date " + stats.date,
         stats.unknownDate ? "Unknown date cards: " + stats.unknownDate : "",
         active.length ? active.join("\\n") : "No filters set"
       ].filter(Boolean).join("\\n");
@@ -522,11 +498,10 @@ function panelJs(initialWords) {
     resetButton.onclick = () => {
       wordsInput.value = "";
       authorsInput.value = "";
-      commentsInput.value = "";
       dateFromInput.value = "";
       dateToInput.value = "";
       hideUnknownDateInput.checked = false;
-      saveConfig({ words: [], authors: [], comments: [], dateFrom: "", dateTo: "", hideUnknownDate: false });
+      saveConfig({ words: [], authors: [], dateFrom: "", dateTo: "", hideUnknownDate: false });
       clearHidden();
       status.textContent = "Reset: all loaded notes visible";
     };
