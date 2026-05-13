@@ -132,7 +132,14 @@ end tell
 function runChromeJs(js) {
   const script = `
 tell application "Google Chrome"
-  return execute active tab of front window javascript ${JSON.stringify(js)}
+  repeat with wi from 1 to count of windows
+    repeat with ti from 1 to count of tabs of window wi
+      if (URL of tab ti of window wi) contains "xiaohongshu.com" then
+        return execute tab ti of window wi javascript ${JSON.stringify(js)}
+      end if
+    end repeat
+  end repeat
+  return "NO_XHS_TAB"
 end tell
 `;
   return runAppleScript(script);
@@ -315,45 +322,6 @@ function panelJs(initialWords) {
         window.dispatchEvent(new Event("scroll"));
       });
     };
-    const parseTranslate = (value) => {
-      const match = String(value || "").match(/translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/);
-      return match ? { x: Number(match[1]), y: Number(match[2]) } : { x: 0, y: 0 };
-    };
-    const compactMasonry = () => {
-      const cards = getCards().filter((card) => card.isConnected);
-      if (!cards.length) return;
-      const parent = cards[0].parentElement;
-      if (!parent) return;
-
-      for (const card of cards) {
-        if (!card.dataset.xhsNegativeOriginalTransform) {
-          card.dataset.xhsNegativeOriginalTransform = card.style.transform || "";
-        }
-      }
-
-      const positioned = cards.map((card, index) => ({
-        card,
-        index,
-        pos: parseTranslate(card.style.transform),
-      }));
-      const xs = [...new Set(positioned.map((item) => Math.round(item.pos.x * 1000) / 1000))]
-        .sort((a, b) => a - b);
-      if (!xs.length) return;
-
-      const gap = Number.parseFloat(getComputedStyle(cards[0]).getPropertyValue("--289b5f05")) || 16;
-      const heights = new Array(xs.length).fill(0);
-      positioned
-        .sort((a, b) => (a.pos.y - b.pos.y) || (a.pos.x - b.pos.x) || (a.index - b.index))
-        .forEach(({ card }) => {
-          const column = heights.indexOf(Math.min(...heights));
-          const x = xs[column];
-          const y = heights[column];
-          card.style.transform = "translate(" + x + "px, " + y + "px)";
-          heights[column] = y + card.getBoundingClientRect().height + gap;
-        });
-      parent.style.height = Math.max(...heights, 0) + "px";
-    };
-
     const clearHidden = () => {
       for (const card of document.querySelectorAll("[" + hiddenAttr + "]")) {
         card.removeAttribute(hiddenAttr);
@@ -368,12 +336,6 @@ function panelJs(initialWords) {
       }
       window.__xhsNegativeRemoved.clear();
       window.__xhsNegativeRemovedUrls.clear();
-      for (const card of getCards()) {
-        if (card.dataset.xhsNegativeOriginalTransform !== undefined) {
-          card.style.transform = card.dataset.xhsNegativeOriginalTransform;
-          delete card.dataset.xhsNegativeOriginalTransform;
-        }
-      }
       triggerLayout();
     };
 
@@ -429,7 +391,6 @@ function panelJs(initialWords) {
           stats.visible += 1;
         }
       }
-      compactMasonry();
       triggerLayout();
       return stats;
     };
