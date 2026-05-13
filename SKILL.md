@@ -66,8 +66,10 @@ Panel features:
 - Drag the black header to move the panel; position is saved in the page.
 - Use "内容排除词" to hide notes by title/card text.
 - Use "过滤作者" to hide notes by author name.
+- Use "过滤评论" to hide notes whose loaded visible comment text contains keywords such as `私`, `已回`, or `1`.
 - Use the start/end date fields to keep only a visible date range.
 - Date filtering only works when a note card exposes date text on the loaded page. Xiaohongshu feed cards often omit publish dates, so the panel reports unknown-date cards and can optionally hide them.
+- Comment filtering only works for comments already present in the current page DOM. If feed cards do not load comments, open the note detail or wait for the comments area to load, then apply the filter.
 
 ## Outputs
 
