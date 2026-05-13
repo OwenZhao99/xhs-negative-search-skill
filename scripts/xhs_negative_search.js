@@ -287,12 +287,22 @@ function panelJs(initialWords) {
       const date = new Date(value + (endOfDay ? "T23:59:59" : "T00:00:00"));
       return Number.isNaN(date.getTime()) ? null : date;
     };
+    const triggerLayout = () => {
+      window.dispatchEvent(new Event("resize"));
+      window.dispatchEvent(new Event("scroll"));
+      document.body.style.minHeight = document.body.style.minHeight === "0px" ? "" : "0px";
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+        window.dispatchEvent(new Event("scroll"));
+      });
+    };
 
     const clearHidden = () => {
       for (const card of document.querySelectorAll("[" + hiddenAttr + "]")) {
         card.removeAttribute(hiddenAttr);
         card.removeAttribute(hitAttr);
       }
+      triggerLayout();
     };
 
     const applyFilters = (filters) => {
@@ -330,6 +340,7 @@ function panelJs(initialWords) {
           stats.visible += 1;
         }
       }
+      triggerLayout();
       return stats;
     };
 
